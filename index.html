@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ultimate Sandboxels with Electricity</title>
+<title>Ultimate Sandboxels Final + Toolbar</title>
 <style>
 body{background:#222;color:white;font-family:Arial;text-align:center;margin:0;}
 canvas{border:2px solid white;background:#000;display:block;margin:0 auto;touch-action:none;}
-button{margin:4px;padding:8px;font-size:14px;}
+button, select{margin:4px;padding:8px;font-size:14px;}
 .controls{margin:6px;}
 #brushDisplay{width:50px;height:50px;border:2px solid white;margin:0 auto;background:#555;border-radius:50%;}
 </style>
 </head>
 <body>
 
-<h3>Ultimate Sandboxels with Electricity</h3>
+<h3>Ultimate Sandboxels Final + Toolbar</h3>
 
 <div class="controls">
 <button onclick="material='sand'">Sand</button>
@@ -33,9 +33,19 @@ button{margin:4px;padding:8px;font-size:14px;}
 <div class="controls">
 Pinselgröße:
 <input type="range" min="1" max="12" value="3" id="brush">
+<div id="brushDisplay"></div>
 </div>
 
-<div id="brushDisplay"></div>
+<div class="controls">
+Hintergrundfarbe:
+<select id="bgColor">
+  <option value="#000000">Schwarz</option>
+  <option value="#222222">Dunkelgrau</option>
+  <option value="#ffffff">Weiß</option>
+  <option value="#001122">Blau</option>
+</select>
+<button onclick="resetCanvas()">Reset</button>
+</div>
 
 <canvas id="game" width="400" height="250"></canvas>
 
@@ -49,42 +59,36 @@ const rows=Math.floor(canvas.height/pixel);
 let material="sand";
 let drawing=false;
 let brushSize=3;
+let bgColor="#000000";
 const brushDisplay=document.getElementById("brushDisplay");
+
 document.getElementById("brush").oninput=e=>{
   brushSize=parseInt(e.target.value);
   brushDisplay.style.width=brushSize*4+"px";
   brushDisplay.style.height=brushSize*4+"px";
 };
 
-// Material IDs
-// 0: leer, 1:Sand, 2:Wasser, 3:Feuer, 4:Glas, 5:Lava, 6:Stein, 7:Dampf, 8:Holz, 9:Eis, 10:Explosion, 11:Pflanze, 12:Strom
-let grid=[];
-for(let y=0;y<rows;y++){
-  grid[y]=[];
-  for(let x=0;x<cols;x++) grid[y][x]=0;
-}
+document.getElementById("bgColor").onchange=e=>{bgColor=e.target.value;}
 
-// Platzieren-Funktion
+// Material IDs
+// 0: leer, 1:Sand, 2:Wasser, 3:Feuer, 4:Glas, 5:Lava, 6:Stein, 7:Dampf, 8:Holz, 9:Eis, 10:Explosion, 11:Pflanze, 12:Strom, 13:Funke
+let grid=[];
+function initGrid(){for(let y=0;y<rows;y++){grid[y]=[]; for(let x=0;x<cols;x++) grid[y][x]=0;}}
+initGrid();
+
+// Platzieren
 function place(cx, cy){
   for(let dy=-brushSize; dy<=brushSize; dy++){
     for(let dx=-brushSize; dx<=brushSize; dx++){
       let x=cx+dx; let y=cy+dy;
       if(x<0||x>=cols||y<0||y>=rows) continue;
-
       if(material==="erase"){ grid[y][x]=0; continue; }
       if(material==="explosion"){ explode(x,y); continue; }
-
-      // Alle anderen Elemente nur auf leeren Feldern
       if(grid[y][x]!==0) continue;
-
       if(material==="sand") grid[y][x]=1;
       if(material==="water") grid[y][x]=2;
-      if(material==="fire"){ 
-        for(let fy=0; fy<brushSize; fy++){ let ny=y-fy; if(ny>=0 && grid[ny][x]===0) grid[ny][x]=3; }
-      }
-      if(material==="lava"){ 
-        for(let fy=0; fy<brushSize; fy++){ let ny=y-fy; if(ny>=0 && grid[ny][x]===0) grid[ny][x]=5; }
-      }
+      if(material==="fire"){ for(let fy=0; fy<brushSize; fy++){ let ny=y-fy; if(ny>=0 && grid[ny][x]===0) grid[ny][x]=3; }}
+      if(material==="lava"){ for(let fy=0; fy<brushSize; fy++){ let ny=y-fy; if(ny>=0 && grid[ny][x]===0) grid[ny][x]=5; }}
       if(material==="stone") grid[y][x]=6;
       if(material==="wood") grid[y][x]=8;
       if(material==="ice") grid[y][x]=9;
@@ -94,7 +98,7 @@ function place(cx, cy){
   }
 }
 
-// Explosion-Funktion
+// Explosion
 function explode(cx, cy){
   const r=brushSize*2;
   for(let y=cy-r;y<=cy+r;y++){
@@ -106,7 +110,7 @@ function explode(cx, cy){
   }
 }
 
-// Maus & Touch
+// Maus/Touch
 canvas.addEventListener("mousedown",()=>drawing=true);
 canvas.addEventListener("mouseup",()=>drawing=false);
 canvas.addEventListener("mousemove",e=>{if(drawing){let p=pos(e.clientX,e.clientY); place(p.x,p.y);}});
@@ -116,72 +120,33 @@ canvas.addEventListener("touchmove",touch);
 function touch(e){if(!drawing) return; let t=e.touches[0]; let p=pos(t.clientX,t.clientY); place(p.x,p.y); e.preventDefault();}
 function pos(clientX,clientY){ const rect=canvas.getBoundingClientRect(); return {x:Math.floor((clientX-rect.left)/pixel),y:Math.floor((clientY-rect.top)/pixel)}}
 
-// Update Logik
-function update(){
-  // Kopie für Strom-Propagation
-  let newGrid=JSON.parse(JSON.stringify(grid));
+// Reset
+function resetCanvas(){initGrid();}
 
+// Update
+function update(){
+  let newGrid=JSON.parse(JSON.stringify(grid));
   for(let y=rows-2;y>=0;y--){
     for(let x=0;x<cols;x++){
       let c=grid[y][x];
-
-      if(c===1){ // Sand
-        if(grid[y+1][x]===0||grid[y+1][x]===2){ let temp=grid[y+1][x]; newGrid[y+1][x]=1; newGrid[y][x]=temp===2?2:0;}
-        if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)) newGrid[y][x]=4;
-      }
-      if(c===2){ // Wasser
-        if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)){newGrid[y][x]=7; continue;}
-        if(grid[y+1][x]===0){ newGrid[y+1][x]=2; newGrid[y][x]=0;}
-        else{ let dir=Math.random()<0.5?-1:1; if(grid[y][x+dir]===0){newGrid[y][x+dir]=2; newGrid[y][x]=0;}}
-      }
-      if(c===3){ // Feuer
-        if(Math.random()<0.05) newGrid[y][x]=0;
-        if(grid[y-1] && grid[y-1][x]===0) newGrid[y-1][x]=3;
-        if(grid[y][x-1]===8||grid[y][x+1]===8||grid[y-1][x]===8) newGrid[y][x]=0;
-      }
-      if(c===5){ // Lava
-        if(grid[y-1] && grid[y-1][x]===0) newGrid[y-1][x]=5;
-      }
-      if(c===7){ // Dampf
-        if(Math.random()<0.05) newGrid[y][x]=0; else if(grid[y-1] && grid[y-1][x]===0){newGrid[y-1][x]=7; newGrid[y][x]=0;}
-      }
-      if(c===8){ // Holz
-        if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3) newGrid[y][x]=3;
-      }
-      if(c===9){ // Eis
-        if((grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y-1]===5||grid[y+1]===5||grid[y][x+1]===5||grid[y][x-1]===5)) newGrid[y][x]=2;
-      }
-      if(c===11){ // Pflanze
-        if(Math.random()<0.01){
-          let dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-          let d=dirs[Math.floor(Math.random()*4)];
-          let nx=x+d[0], ny=y+d[1];
-          if(nx>=0&&nx<cols&&ny>=0&&ny<rows && newGrid[ny][nx]===0) newGrid[ny][nx]=11;
-        }
-        if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3) newGrid[y][x]=0;
-      }
-      if(c===12){ // Strom Propagation
-        let dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-        for(let d of dirs){
-          let nx=x+d[0], ny=y+d[1];
-          if(nx>=0 && nx<cols && ny>=0 && ny<rows){
-            if(grid[ny][nx]===2 || grid[ny][nx]===8){ // Wasser oder Holz leitet Strom
-              newGrid[ny][nx]=12;
-              if(grid[ny][nx]===8) newGrid[ny][nx]=3; // Holz brennt durch Strom
-              if(grid[ny][nx]===2) newGrid[ny][nx]=7; // Wasser verdampft zu Dampf
-            }
-          }
-        }
-        if(Math.random()<0.05) newGrid[y][x]=0; // Strom verschwindet langsam
-      }
+      if(c===1){ if(grid[y+1][x]===0||grid[y+1][x]===2){ let temp=grid[y+1][x]; newGrid[y+1][x]=1; newGrid[y][x]=temp===2?2:0;} if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)) newGrid[y][x]=4; }
+      if(c===2){ if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)){newGrid[y][x]=7; continue;} if(grid[y+1][x]===0){ newGrid[y+1][x]=2; newGrid[y][x]=0;} else{ let dir=Math.random()<0.5?-1:1; if(grid[y][x+dir]===0){newGrid[y][x+dir]=2; newGrid[y][x]=0;}} }
+      if(c===3){ if(Math.random()<0.05) newGrid[y][x]=0; if(grid[y-1] && grid[y-1][x]===0) newGrid[y-1][x]=3; if(grid[y][x-1]===8||grid[y][x+1]===8||grid[y-1][x]===8){ newGrid[y][x]=0; explode(x,y); } }
+      if(c===5){ if(grid[y-1] && grid[y-1][x]===0) newGrid[y-1][x]=5; }
+      if(c===7){ if(Math.random()<0.05) newGrid[y][x]=0; else if(grid[y-1] && grid[y-1][x]===0){newGrid[y-1][x]=7; newGrid[y][x]=0;} }
+      if(c===8){ if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3){ newGrid[y][x]=3; explode(x,y); } }
+      if(c===9){ if((grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y-1]===5||grid[y+1]===5||grid[y][x+1]===5||grid[y][x-1]===5)) newGrid[y][x]=2; }
+      if(c===11){ if(Math.random()<0.01){ let dirs=[[1,0],[-1,0],[0,1],[0,-1]]; let d=dirs[Math.floor(Math.random()*4)]; let nx=x+d[0], ny=y+d[1]; if(nx>=0&&nx<cols&&ny>=0&&ny<rows && newGrid[ny][nx]===0) newGrid[ny][nx]=11; } if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3) newGrid[y][x]=0; }
+      if(c===12){ let dirs=[[1,0],[-1,0],[0,1],[0,-1]]; for(let d of dirs){ let nx=x+d[0], ny=y+d[1]; if(nx>=0 && nx<cols && ny>=0 && ny<rows){ if(grid[ny][nx]===2 || grid[ny][nx]===8){ newGrid[ny][nx]=12; if(Math.random()<0.3) newGrid[y][x]=13; if(grid[ny][nx]===8) newGrid[ny][nx]=3; if(grid[ny][nx]===2) newGrid[ny][nx]=7; } } } if(Math.random()<0.05) newGrid[y][x]=0; }
+      if(c===13){ if(Math.random()<0.5) newGrid[y][x]=0; }
     }
   }
   grid=newGrid;
 }
 
-// Zeichnen
+// Draw
 function draw(){
-  ctx.fillStyle="#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=bgColor; ctx.fillRect(0,0,canvas.width,canvas.height);
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols;x++){
       let c=grid[y][x]; if(c===0) continue;
@@ -195,7 +160,8 @@ function draw(){
       if(c===8) ctx.fillStyle="saddlebrown";
       if(c===9) ctx.fillStyle="cyan";
       if(c===11) ctx.fillStyle="green";
-      if(c===12) ctx.fillStyle="cyan"; // Strom sichtbar
+      if(c===12) ctx.fillStyle="cyan";
+      if(c===13) ctx.fillStyle="white";
       ctx.fillRect(x*pixel,y*pixel,pixel,pixel);
     }
   }
