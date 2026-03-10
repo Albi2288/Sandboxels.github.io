@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Sandbox Mobile</title>
+
+<style>
+body{
+background:#111;
+color:white;
+font-family:Arial;
+text-align:center;
+margin:0;
+}
+
+canvas{
+border:2px solid white;
+touch-action:none;
+}
+
+button{
+margin:5px;
+padding:12px;
+font-size:16px;
+}
+</style>
+</head>
+<body>
+
+<h2>Mini Sandbox</h2>
+
+<div>
+<button onclick="material='sand'">Sand</button>
+<button onclick="material='water'">Wasser</button>
+<button onclick="material='fire'">Feuer</button>
+<button onclick="material='erase'">Radierer</button>
+</div>
+
+<canvas id="game" width="600" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const pixel = 4;
+const cols = canvas.width/pixel;
+const rows = canvas.height/pixel;
+
+let material = "sand";
+let drawing = false;
+
+let grid = [];
+
+for(let y=0;y<rows;y++){
+grid[y]=[];
+for(let x=0;x<cols;x++){
+grid[y][x]=0;
+}
+}
+
+function place(x,y){
+
+if(x>=0 && x<cols && y>=0 && y<rows){
+
+if(material==="sand") grid[y][x]=1;
+if(material==="water") grid[y][x]=2;
+if(material==="fire") grid[y][x]=3;
+if(material==="erase") grid[y][x]=0;
+
+}
+}
+
+// Maus
+canvas.addEventListener("mousedown",()=>drawing=true);
+canvas.addEventListener("mouseup",()=>drawing=false);
+
+canvas.addEventListener("mousemove",e=>{
+if(!drawing) return;
+
+const rect = canvas.getBoundingClientRect();
+const x = Math.floor((e.clientX-rect.left)/pixel);
+const y = Math.floor((e.clientY-rect.top)/pixel);
+
+place(x,y);
+});
+
+// Touch (Handy)
+canvas.addEventListener("touchstart",e=>{
+drawing=true;
+handleTouch(e);
+});
+
+canvas.addEventListener("touchend",()=>drawing=false);
+
+canvas.addEventListener("touchmove",e=>{
+handleTouch(e);
+});
+
+function handleTouch(e){
+
+if(!drawing) return;
+
+const rect = canvas.getBoundingClientRect();
+const touch = e.touches[0];
+
+const x = Math.floor((touch.clientX-rect.left)/pixel);
+const y = Math.floor((touch.clientY-rect.top)/pixel);
+
+place(x,y);
+
+e.preventDefault();
+}
+
+function update(){
+
+for(let y=rows-2;y>=0;y--){
+for(let x=0;x<cols;x++){
+
+let cell = grid[y][x];
+
+if(cell===1){ // sand
+if(grid[y+1][x]===0){
+grid[y+1][x]=1;
+grid[y][x]=0;
+}
+}
+
+if(cell===2){ // water
+if(grid[y+1][x]===0){
+grid[y+1][x]=2;
+grid[y][x]=0;
+}else{
+let dir=Math.random()<0.5?-1:1;
+if(grid[y][x+dir]===0){
+grid[y][x+dir]=2;
+grid[y][x]=0;
+}
+}
+}
+
+if(cell===3){ // fire
+if(Math.random()<0.03){
+grid[y][x]=0;
+}
+}
+
+}
+}
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+for(let y=0;y<rows;y++){
+for(let x=0;x<cols;x++){
+
+let cell = grid[y][x];
+
+if(cell===1) ctx.fillStyle="yellow";
+if(cell===2) ctx.fillStyle="blue";
+if(cell===3) ctx.fillStyle="red";
+if(cell===0) continue;
+
+ctx.fillRect(x*pixel,y*pixel,pixel,pixel);
+
+}
+}
+
+}
+
+function loop(){
+update();
+draw();
+requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
