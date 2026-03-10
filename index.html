@@ -3,180 +3,205 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Sandbox Mobile</title>
-
+<title>Ultimate Sandboxels with Electricity</title>
 <style>
-body{
-background:#111;
-color:white;
-font-family:Arial;
-text-align:center;
-margin:0;
-}
-
-canvas{
-border:2px solid white;
-touch-action:none;
-}
-
-button{
-margin:5px;
-padding:12px;
-font-size:16px;
-}
+body{background:#222;color:white;font-family:Arial;text-align:center;margin:0;}
+canvas{border:2px solid white;background:#000;display:block;margin:0 auto;touch-action:none;}
+button{margin:4px;padding:8px;font-size:14px;}
+.controls{margin:6px;}
+#brushDisplay{width:50px;height:50px;border:2px solid white;margin:0 auto;background:#555;border-radius:50%;}
 </style>
 </head>
 <body>
 
-<h2>Mini Sandbox</h2>
+<h3>Ultimate Sandboxels with Electricity</h3>
 
-<div>
+<div class="controls">
 <button onclick="material='sand'">Sand</button>
 <button onclick="material='water'">Wasser</button>
 <button onclick="material='fire'">Feuer</button>
+<button onclick="material='lava'">Lava</button>
+<button onclick="material='stone'">Stein</button>
+<button onclick="material='wood'">Holz</button>
+<button onclick="material='ice'">Eis</button>
+<button onclick="material='plant'">Pflanze</button>
+<button onclick="material='electric'">Strom</button>
+<button onclick="material='explosion'">Explosion</button>
 <button onclick="material='erase'">Radierer</button>
 </div>
 
-<canvas id="game" width="600" height="400"></canvas>
+<div class="controls">
+Pinselgröße:
+<input type="range" min="1" max="12" value="3" id="brush">
+</div>
+
+<div id="brushDisplay"></div>
+
+<canvas id="game" width="400" height="250"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const pixel=6;
+const cols=Math.floor(canvas.width/pixel);
+const rows=Math.floor(canvas.height/pixel);
 
-const pixel = 4;
-const cols = canvas.width/pixel;
-const rows = canvas.height/pixel;
+let material="sand";
+let drawing=false;
+let brushSize=3;
+const brushDisplay=document.getElementById("brushDisplay");
+document.getElementById("brush").oninput=e=>{
+  brushSize=parseInt(e.target.value);
+  brushDisplay.style.width=brushSize*4+"px";
+  brushDisplay.style.height=brushSize*4+"px";
+};
 
-let material = "sand";
-let drawing = false;
-
-let grid = [];
-
+// Material IDs
+// 0: leer, 1:Sand, 2:Wasser, 3:Feuer, 4:Glas, 5:Lava, 6:Stein, 7:Dampf, 8:Holz, 9:Eis, 10:Explosion, 11:Pflanze, 12:Strom
+let grid=[];
 for(let y=0;y<rows;y++){
-grid[y]=[];
-for(let x=0;x<cols;x++){
-grid[y][x]=0;
-}
+  grid[y]=[];
+  for(let x=0;x<cols;x++) grid[y][x]=0;
 }
 
-function place(x,y){
+// Platzieren-Funktion
+function place(cx, cy){
+  for(let dy=-brushSize; dy<=brushSize; dy++){
+    for(let dx=-brushSize; dx<=brushSize; dx++){
+      let x=cx+dx; let y=cy+dy;
+      if(x<0||x>=cols||y<0||y>=rows) continue;
 
-if(x>=0 && x<cols && y>=0 && y<rows){
+      if(material==="erase"){ grid[y][x]=0; continue; }
+      if(material==="explosion"){ explode(x,y); continue; }
 
-if(material==="sand") grid[y][x]=1;
-if(material==="water") grid[y][x]=2;
-if(material==="fire") grid[y][x]=3;
-if(material==="erase") grid[y][x]=0;
+      // Alle anderen Elemente nur auf leeren Feldern
+      if(grid[y][x]!==0) continue;
 
+      if(material==="sand") grid[y][x]=1;
+      if(material==="water") grid[y][x]=2;
+      if(material==="fire"){ 
+        for(let fy=0; fy<brushSize; fy++){ let ny=y-fy; if(ny>=0 && grid[ny][x]===0) grid[ny][x]=3; }
+      }
+      if(material==="lava"){ 
+        for(let fy=0; fy<brushSize; fy++){ let ny=y-fy; if(ny>=0 && grid[ny][x]===0) grid[ny][x]=5; }
+      }
+      if(material==="stone") grid[y][x]=6;
+      if(material==="wood") grid[y][x]=8;
+      if(material==="ice") grid[y][x]=9;
+      if(material==="plant") grid[y][x]=11;
+      if(material==="electric") grid[y][x]=12;
+    }
+  }
 }
+
+// Explosion-Funktion
+function explode(cx, cy){
+  const r=brushSize*2;
+  for(let y=cy-r;y<=cy+r;y++){
+    for(let x=cx-r;x<=cx+r;x++){
+      if(x<0||x>=cols||y<0||y>=rows) continue;
+      let dx=x-cx, dy=y-cy;
+      if(dx*dx+dy*dy<=r*r){ grid[y][x]=0; if(Math.random()<0.2) grid[y][x]=3; }
+    }
+  }
 }
 
-// Maus
+// Maus & Touch
 canvas.addEventListener("mousedown",()=>drawing=true);
 canvas.addEventListener("mouseup",()=>drawing=false);
-
-canvas.addEventListener("mousemove",e=>{
-if(!drawing) return;
-
-const rect = canvas.getBoundingClientRect();
-const x = Math.floor((e.clientX-rect.left)/pixel);
-const y = Math.floor((e.clientY-rect.top)/pixel);
-
-place(x,y);
-});
-
-// Touch (Handy)
-canvas.addEventListener("touchstart",e=>{
-drawing=true;
-handleTouch(e);
-});
-
+canvas.addEventListener("mousemove",e=>{if(drawing){let p=pos(e.clientX,e.clientY); place(p.x,p.y);}});
+canvas.addEventListener("touchstart",e=>{drawing=true; touch(e);});
 canvas.addEventListener("touchend",()=>drawing=false);
+canvas.addEventListener("touchmove",touch);
+function touch(e){if(!drawing) return; let t=e.touches[0]; let p=pos(t.clientX,t.clientY); place(p.x,p.y); e.preventDefault();}
+function pos(clientX,clientY){ const rect=canvas.getBoundingClientRect(); return {x:Math.floor((clientX-rect.left)/pixel),y:Math.floor((clientY-rect.top)/pixel)}}
 
-canvas.addEventListener("touchmove",e=>{
-handleTouch(e);
-});
-
-function handleTouch(e){
-
-if(!drawing) return;
-
-const rect = canvas.getBoundingClientRect();
-const touch = e.touches[0];
-
-const x = Math.floor((touch.clientX-rect.left)/pixel);
-const y = Math.floor((touch.clientY-rect.top)/pixel);
-
-place(x,y);
-
-e.preventDefault();
-}
-
+// Update Logik
 function update(){
+  // Kopie für Strom-Propagation
+  let newGrid=JSON.parse(JSON.stringify(grid));
 
-for(let y=rows-2;y>=0;y--){
-for(let x=0;x<cols;x++){
+  for(let y=rows-2;y>=0;y--){
+    for(let x=0;x<cols;x++){
+      let c=grid[y][x];
 
-let cell = grid[y][x];
+      if(c===1){ // Sand
+        if(grid[y+1][x]===0||grid[y+1][x]===2){ let temp=grid[y+1][x]; newGrid[y+1][x]=1; newGrid[y][x]=temp===2?2:0;}
+        if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)) newGrid[y][x]=4;
+      }
+      if(c===2){ // Wasser
+        if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)){newGrid[y][x]=7; continue;}
+        if(grid[y+1][x]===0){ newGrid[y+1][x]=2; newGrid[y][x]=0;}
+        else{ let dir=Math.random()<0.5?-1:1; if(grid[y][x+dir]===0){newGrid[y][x+dir]=2; newGrid[y][x]=0;}}
+      }
+      if(c===3){ // Feuer
+        if(Math.random()<0.05) newGrid[y][x]=0;
+        if(grid[y-1] && grid[y-1][x]===0) newGrid[y-1][x]=3;
+        if(grid[y][x-1]===8||grid[y][x+1]===8||grid[y-1][x]===8) newGrid[y][x]=0;
+      }
+      if(c===5){ // Lava
+        if(grid[y-1] && grid[y-1][x]===0) newGrid[y-1][x]=5;
+      }
+      if(c===7){ // Dampf
+        if(Math.random()<0.05) newGrid[y][x]=0; else if(grid[y-1] && grid[y-1][x]===0){newGrid[y-1][x]=7; newGrid[y][x]=0;}
+      }
+      if(c===8){ // Holz
+        if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3) newGrid[y][x]=3;
+      }
+      if(c===9){ // Eis
+        if((grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y-1]===5||grid[y+1]===5||grid[y][x+1]===5||grid[y][x-1]===5)) newGrid[y][x]=2;
+      }
+      if(c===11){ // Pflanze
+        if(Math.random()<0.01){
+          let dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+          let d=dirs[Math.floor(Math.random()*4)];
+          let nx=x+d[0], ny=y+d[1];
+          if(nx>=0&&nx<cols&&ny>=0&&ny<rows && newGrid[ny][nx]===0) newGrid[ny][nx]=11;
+        }
+        if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3) newGrid[y][x]=0;
+      }
+      if(c===12){ // Strom Propagation
+        let dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+        for(let d of dirs){
+          let nx=x+d[0], ny=y+d[1];
+          if(nx>=0 && nx<cols && ny>=0 && ny<rows){
+            if(grid[ny][nx]===2 || grid[ny][nx]===8){ // Wasser oder Holz leitet Strom
+              newGrid[ny][nx]=12;
+              if(grid[ny][nx]===8) newGrid[ny][nx]=3; // Holz brennt durch Strom
+              if(grid[ny][nx]===2) newGrid[ny][nx]=7; // Wasser verdampft zu Dampf
+            }
+          }
+        }
+        if(Math.random()<0.05) newGrid[y][x]=0; // Strom verschwindet langsam
+      }
+    }
+  }
+  grid=newGrid;
+}
 
-if(cell===1){ // sand
-if(grid[y+1][x]===0){
-grid[y+1][x]=1;
-grid[y][x]=0;
-}
-}
-
-if(cell===2){ // water
-if(grid[y+1][x]===0){
-grid[y+1][x]=2;
-grid[y][x]=0;
-}else{
-let dir=Math.random()<0.5?-1:1;
-if(grid[y][x+dir]===0){
-grid[y][x+dir]=2;
-grid[y][x]=0;
-}
-}
-}
-
-if(cell===3){ // fire
-if(Math.random()<0.03){
-grid[y][x]=0;
-}
-}
-
-}
-}
-
-}
-
+// Zeichnen
 function draw(){
-
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-for(let y=0;y<rows;y++){
-for(let x=0;x<cols;x++){
-
-let cell = grid[y][x];
-
-if(cell===1) ctx.fillStyle="yellow";
-if(cell===2) ctx.fillStyle="blue";
-if(cell===3) ctx.fillStyle="red";
-if(cell===0) continue;
-
-ctx.fillRect(x*pixel,y*pixel,pixel,pixel);
-
-}
-}
-
-}
-
-function loop(){
-update();
-draw();
-requestAnimationFrame(loop);
+  ctx.fillStyle="#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      let c=grid[y][x]; if(c===0) continue;
+      if(c===1) ctx.fillStyle="gold";
+      if(c===2) ctx.fillStyle="deepskyblue";
+      if(c===3){ let r=Math.random(); ctx.fillStyle=r<0.33?"yellow":(r<0.66?"orange":"red"); }
+      if(c===4) ctx.fillStyle="lightgray";
+      if(c===5) ctx.fillStyle="orangered";
+      if(c===6) ctx.fillStyle="gray";
+      if(c===7) ctx.fillStyle="white";
+      if(c===8) ctx.fillStyle="saddlebrown";
+      if(c===9) ctx.fillStyle="cyan";
+      if(c===11) ctx.fillStyle="green";
+      if(c===12) ctx.fillStyle="cyan"; // Strom sichtbar
+      ctx.fillRect(x*pixel,y*pixel,pixel,pixel);
+    }
+  }
 }
 
+function loop(){update(); draw(); requestAnimationFrame(loop);}
 loop();
 </script>
 
