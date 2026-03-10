@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ultimate Sandboxels Final + Toolbar</title>
+<title>Sandboxels Optimized</title>
 <style>
 body{background:#222;color:white;font-family:Arial;text-align:center;margin:0;}
 canvas{border:2px solid white;background:#000;display:block;margin:0 auto;touch-action:none;}
@@ -14,7 +14,7 @@ button, select{margin:4px;padding:8px;font-size:14px;}
 </head>
 <body>
 
-<h3>Ultimate Sandboxels Final + Toolbar</h3>
+<h3>Sandboxels Optimized</h3>
 
 <div class="controls">
 <button onclick="material='sand'">Sand</button>
@@ -52,7 +52,7 @@ Hintergrundfarbe:
 <script>
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
-const pixel=6;
+const pixel=8;
 const cols=Math.floor(canvas.width/pixel);
 const rows=Math.floor(canvas.height/pixel);
 
@@ -124,24 +124,39 @@ function pos(clientX,clientY){ const rect=canvas.getBoundingClientRect(); return
 function resetCanvas(){initGrid();}
 
 // Update
+let frameCount=0;
 function update(){
-  let newGrid=JSON.parse(JSON.stringify(grid));
+  frameCount++;
   for(let y=rows-2;y>=0;y--){
     for(let x=0;x<cols;x++){
       let c=grid[y][x];
-      if(c===1){ if(grid[y+1][x]===0||grid[y+1][x]===2){ let temp=grid[y+1][x]; newGrid[y+1][x]=1; newGrid[y][x]=temp===2?2:0;} if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)) newGrid[y][x]=4; }
-      if(c===2){ if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)){newGrid[y][x]=7; continue;} if(grid[y+1][x]===0){ newGrid[y+1][x]=2; newGrid[y][x]=0;} else{ let dir=Math.random()<0.5?-1:1; if(grid[y][x+dir]===0){newGrid[y][x+dir]=2; newGrid[y][x]=0;}} }
-      if(c===3){ if(Math.random()<0.05) newGrid[y][x]=0; if(grid[y-1] && grid[y-1][x]===0) newGrid[y-1][x]=3; if(grid[y][x-1]===8||grid[y][x+1]===8||grid[y-1][x]===8){ newGrid[y][x]=0; explode(x,y); } }
-      if(c===5){ if(grid[y-1] && grid[y-1][x]===0) newGrid[y-1][x]=5; }
-      if(c===7){ if(Math.random()<0.05) newGrid[y][x]=0; else if(grid[y-1] && grid[y-1][x]===0){newGrid[y-1][x]=7; newGrid[y][x]=0;} }
-      if(c===8){ if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3){ newGrid[y][x]=3; explode(x,y); } }
-      if(c===9){ if((grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y-1]===5||grid[y+1]===5||grid[y][x+1]===5||grid[y][x-1]===5)) newGrid[y][x]=2; }
-      if(c===11){ if(Math.random()<0.01){ let dirs=[[1,0],[-1,0],[0,1],[0,-1]]; let d=dirs[Math.floor(Math.random()*4)]; let nx=x+d[0], ny=y+d[1]; if(nx>=0&&nx<cols&&ny>=0&&ny<rows && newGrid[ny][nx]===0) newGrid[ny][nx]=11; } if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3) newGrid[y][x]=0; }
-      if(c===12){ let dirs=[[1,0],[-1,0],[0,1],[0,-1]]; for(let d of dirs){ let nx=x+d[0], ny=y+d[1]; if(nx>=0 && nx<cols && ny>=0 && ny<rows){ if(grid[ny][nx]===2 || grid[ny][nx]===8){ newGrid[ny][nx]=12; if(Math.random()<0.3) newGrid[y][x]=13; if(grid[ny][nx]===8) newGrid[ny][nx]=3; if(grid[ny][nx]===2) newGrid[ny][nx]=7; } } } if(Math.random()<0.05) newGrid[y][x]=0; }
-      if(c===13){ if(Math.random()<0.5) newGrid[y][x]=0; }
+
+      if(c===1){ // Sand
+        if(grid[y+1][x]===0||grid[y+1][x]===2){ let temp=grid[y+1][x]; grid[y+1][x]=1; grid[y][x]=temp===2?2:0;}
+        if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)) grid[y][x]=4;
+      }
+      if(c===2){ // Wasser
+        if((grid[y-1] && (grid[y-1][x]===3||grid[y-1][x]===5))||(grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y][x+1]===5||grid[y][x-1]===5)){grid[y][x]=7; continue;}
+        if(grid[y+1][x]===0){ grid[y+1][x]=2; grid[y][x]=0;} else{ let dir=Math.random()<0.5?-1:1; if(grid[y][x+dir]===0){grid[y][x+dir]=2; grid[y][x]=0;}}
+      }
+      if(c===3){ // Feuer
+        if(Math.random()<0.05) grid[y][x]=0;
+        if(grid[y-1] && grid[y-1][x]===0) grid[y-1][x]=3;
+        if(grid[y][x-1]===8||grid[y][x+1]===8||grid[y-1][x]===8){ grid[y][x]=0; if(frameCount%3===0) explode(x,y);}
+      }
+      if(c===5){ if(grid[y-1] && grid[y-1][x]===0) grid[y-1][x]=5; }
+      if(c===7){ if(Math.random()<0.05) grid[y][x]=0; else if(grid[y-1] && grid[y-1][x]===0){grid[y-1][x]=7; grid[y][x]=0;} }
+      if(c===8){ if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3){ grid[y][x]=3; if(frameCount%3===0) explode(x,y); } }
+      if(c===9){ if((grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3)||(grid[y-1]===5||grid[y+1]===5||grid[y][x+1]===5||grid[y][x-1]===5)) grid[y][x]=2; }
+      if(c===11){ if(Math.random()<0.01){ let dirs=[[1,0],[-1,0],[0,1],[0,-1]]; let d=dirs[Math.floor(Math.random()*4)]; let nx=x+d[0], ny=y+d[1]; if(nx>=0&&nx<cols&&ny>=0&&ny<rows && grid[ny][nx]===0) grid[ny][nx]=11; } if(grid[y-1]===3||grid[y+1]===3||grid[y][x+1]===3||grid[y][x-1]===3) grid[y][x]=0; }
+      if(c===12 && frameCount%2===0){ // Strom langsamer
+        let dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+        for(let d of dirs){ let nx=x+d[0], ny=y+d[1]; if(nx>=0 && nx<cols && ny>=0 && ny<rows){ if(grid[ny][nx]===2 || grid[ny][nx]===8){ grid[ny][nx]=12; if(Math.random()<0.3) grid[y][x]=13; if(grid[ny][nx]===8) grid[ny][nx]=3; if(grid[ny][nx]===2) grid[ny][nx]=7; } } }
+        if(Math.random()<0.05) grid[y][x]=0;
+      }
+      if(c===13){ if(Math.random()<0.5) grid[y][x]=0; }
     }
   }
-  grid=newGrid;
 }
 
 // Draw
